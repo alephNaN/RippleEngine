@@ -56,6 +56,13 @@
 				}, self.interval);
 			}
 
+			CanvasState.prototype.redraw = function() {
+				this.valid = false;
+				
+				// force redraw. if we don't, we delegate drawing scheduling back to CanvasState timer
+				// this.draw();
+			}
+
 			CanvasState.prototype.draw = function() {
 				if (!this.valid)  {
 					var ctx = this.ctx;
@@ -81,36 +88,33 @@
 				    this.valid = true;
 				}
 			}
-
 			CanvasState.prototype.addShape = function(shape) {
 			  this.shapes.push(shape);
 			  this.valid = false;
 			}
-
 			CanvasState.prototype.clear = function() {
 			  this.ctx.clearRect(0, 0, this.width, this.height);
 			}
 
 			// Triangle
-			function Shape(x, y, b, color, num) {
+			function Shape(x, y, color) {
 				this.x = x || 0;
 				this.y = y || 0;
-				this.b = b || 1;
-				this.h = Math.floor(Math.sqrt(3) * b / 2);
 				this.color = color || '#8e44ad';
-				this.num = num || 0;
 			}
 			Shape.prototype.draw = function(ctx) {
+
+			}
+
+			Square.inheritsFrom(Shape);
+			function Square(x, y, color, w) {
+				Super(this).call(this, x, y, color);
+				this.w = w;
+			}
+			Square.prototype.draw = function(ctx) {
 				ctx.fillStyle = this.color;
 				ctx.beginPath();
-				ctx.moveTo(this.x + 0, this.y + 0);
-				ctx.lineTo(this.x + this.b, this.y);
-				ctx.lineTo(this.x + (this.b/2), this.y + this.h);
-				ctx.fill();
-
-				ctx.fillStyle = "white";
-				ctx.font = "12px Arial";
-				ctx.fillText(this.num, this.x + this.b/2 - 6, this.y + this.h/2 + 12);
+				ctx.fillRect(this.x, this.y, this.w, this.w);
 			}
 
 			// Upside Down Triangle
@@ -118,7 +122,10 @@
 			// Constructor
 			function Triangle(x, y, b, color, num) {
 				// Invoke Super
-				Super(this).call(this, x, y, b, color, num);
+				Super(this).call(this, x, y, color);
+				this.b = b;
+				this.h = util.equilateralBToH(b);
+				this.num = num;
 			}
 			Triangle.prototype.draw = function(ctx) {
 				ctx.fillStyle = this.color;
@@ -133,33 +140,52 @@
 				ctx.fillText(this.num, this.x + this.b/2 - 6, this.y + this.h/2 +12);
 			}
 
-			$(document).ready(function() {
+			function Tile(x, y, size, color, canvas) {
+				this.shape = new Square(x, y, color, size);
 
+				// delegate redrawing management to canvas
+				canvas.addShape(this.shape);
+			}
+			Tile.prototype.change = function(x) {
+				this.shape.x += x
+			}
 
-				var s = new CanvasState(document.getElementById('game'));
-				var TRIANGLES_PER_ROW = 8;
+			function Grid(canvas) {
+				this.canvasState = canvas;
+				this.tiles = [];
+
 				var NUM_ROWS = 10;
-				var TRIANGLE_LENGTH = 100;
-				var ROW_OFFSET = util.equilateralBToH(TRIANGLE_LENGTH);
-				for (var j = 0; j < NUM_ROWS ; j++) {
-					var upTriangleLeftOffset = 0;
-					var downTriangleLeftOffset = 0;
-					if (j % 2 == 0) {
-						upTriangleLeftOffset = TRIANGLE_LENGTH/2;
-					} else {
-						downTriangleLeftOffset = TRIANGLE_LENGTH/2;
-					}
-					for (var i = -1 ; i < TRIANGLES_PER_ROW; i++) {
-						s.addShape(new Shape(upTriangleLeftOffset + i*TRIANGLE_LENGTH , j*ROW_OFFSET, TRIANGLE_LENGTH, null,2*i+1));
-						s.addShape(new Triangle(downTriangleLeftOffset + i*TRIANGLE_LENGTH, j*ROW_OFFSET, TRIANGLE_LENGTH, "#28b162", 2*i));
+				var NUM_COLS = 10;
+				var TILE_SIZE = 50;
+				for(var i = 0; i < NUM_COLS; i++) {
+					for (var j = 0; j < NUM_ROWS; j++) {
+						var color = (i + j) % 2 === 0 ? "#FF0000" : "#000000";
+
+						this.tiles.push(new Tile(TILE_SIZE*i, TILE_SIZE*j, TILE_SIZE, color, canvas));
 					}
 				}
+			}
+			// Updates the grid. And redraw
+			Grid.prototype.update = function() {
+				this.canvasState.redraw();
+			}
+
+			$(document).ready(function() {
+
+				var canvas = new CanvasState(document.getElementById("game"));
+
+				var g = new Grid(canvas);
+
+				setInterval(function() {
+					g.update();
+				}, 50);
 			});
 		</script>
 		<style>
 		</style>
 	</head>
 	<body>
+		
 		<canvas id="game" width="800" height="600">
 			This text is displayed if your browser does not support HTML5 Canvas.
 		</canvas>
