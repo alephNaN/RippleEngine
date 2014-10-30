@@ -140,28 +140,70 @@
 				ctx.fillText(this.num, this.x + this.b/2 - 6, this.y + this.h/2 +12);
 			}
 
-			function Tile(x, y, size, color, canvas) {
-				this.shape = new Square(x, y, color, size);
-
+			function Tile(x, y, size, color, canvas, magnitude) {
+				this.shape = new Square(x, y, "#BFD37B", size);
+				this.magnitude = magnitude || 0;
+				this.shape.color = gradient(magnitude);
+				this.shape.color = makeColorGradient(.3,.3,.3,0,2,4, 127, magnitude / 10);
 				// delegate redrawing management to canvas
 				canvas.addShape(this.shape);
+
+
 			}
-			Tile.prototype.change = function(x) {
-				this.shape.x += x
+			Tile.prototype.setMagnitude = function (m) {
+				this.m = m;
+			}
+			// utility function. magnitude -> color
+			function gradient(i) {
+				var start = parseInt("0x000000", 16);
+				var end = parseInt("0xFFFFFF", 16);
+				var numSteps = 1200;
+
+				var step = Math.floor((end - start) / numSteps);
+
+				var number = start + step*i;
+				var hex = number.toString(16);
+				while (hex.length < 6) {
+					hex = "0" + hex;
+				}
+				hex = hex.toUpperCase();
+				hex = "#" + hex;
+				return hex;
+			}
+
+			function makeColorGradient(frequency1, frequency2, frequency3,
+			                             phase1, phase2, phase3, width, i){
+
+			    if (width == undefined)    width = 127;
+			
+			       var red = Math.sin(frequency1*i + phase1) * width;
+			       var grn = Math.sin(frequency2*i + phase2) * width;
+			       var blu = Math.sin(frequency3*i + phase3) * width;
+			       return RGB2Color(red,grn,blu);
+			    
+			}
+
+			function RGB2Color(r,g,b){
+			    return '#' + byte2Hex(r) + byte2Hex(g) + byte2Hex(b);
+			}
+
+			function byte2Hex(n) {
+				var nybHexString = "0123456789ABCDEF";
+				return String(nybHexString.substr((n >> 4) & 0x0F,1)) + nybHexString.substr(n & 0x0F,1);
 			}
 
 			function Grid(canvas) {
 				this.canvasState = canvas;
 				this.tiles = [];
 
-				var NUM_ROWS = 10;
-				var NUM_COLS = 10;
-				var TILE_SIZE = 50;
+				var TILE_SIZE = 20;
+				var NUM_ROWS = canvas.height / TILE_SIZE;
+				var NUM_COLS = canvas.width / TILE_SIZE;
 				for(var i = 0; i < NUM_COLS; i++) {
 					for (var j = 0; j < NUM_ROWS; j++) {
 						var color = (i + j) % 2 === 0 ? "#FF0000" : "#000000";
 
-						this.tiles.push(new Tile(TILE_SIZE*i, TILE_SIZE*j, TILE_SIZE, color, canvas));
+						this.tiles.push(new Tile(TILE_SIZE*i, TILE_SIZE*j, TILE_SIZE, color, canvas, Math.abs(NUM_COLS/2 - i)  + Math.abs(NUM_ROWS/2 - j)));
 					}
 				}
 			}
@@ -180,6 +222,8 @@
 					g.update();
 				}, 50);
 			});
+
+
 		</script>
 		<style>
 		</style>
